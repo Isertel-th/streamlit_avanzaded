@@ -1,0 +1,29 @@
+[theme]
+# Base: 'dark' para un aspecto moderno, 'light' para un aspecto clásico.
+base = "light" 
+
+# primaryColor: Color principal usado en botones, enlaces y el delta de st.metric.
+primaryColor = "#bbbbbbff" 
+
+# backgroundColor: El fondo principal de la aplicación.
+backgroundColor = "#e5e5e5ff" 
+
+# secondaryBackgroundColor: Color de fondo para la barra lateral (sidebar) y contenedores.
+secondaryBackgroundColor = "#bbbbbbff"
+
+# textColor: Color principal del texto.
+textColor = "#000000ff"
+
+#color rojo "#BC2929"
+#color verde "#00BA41"
+#color azul "#2D56D1"
+#color celeste "#30D1CC"
+#color morado "#D408CD"
+
+
+# font: Tipo de fuente.
+font = "sans serif"
+
+# --- CAMBIO AÑADIDO: OCULTAR EL SIDEBAR DE NAVEGACIÓN PERMANENTEMENTE ---
+[client]
+showSidebarNavigation = false
