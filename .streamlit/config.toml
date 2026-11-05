@@ -6,10 +6,10 @@ base = "light"
 primaryColor = "#00BA41" 
 
 # backgroundColor: El fondo principal de la aplicación.
-backgroundColor = "rgb(69, 68, 68)" 
+backgroundColor = "rgb(27, 26, 26)" 
 
 # secondaryBackgroundColor: Color de fondo para la barra lateral (sidebar) y contenedores.
-secondaryBackgroundColor = "rgb(69, 68, 68)" 
+secondaryBackgroundColor = "rgb(27, 26, 26)" 
 
 # textColor: Color principal del texto.
 textColor = "#00BA41"
