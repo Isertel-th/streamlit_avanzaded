@@ -998,7 +998,7 @@ else:
                                     x='_FECHA_DIA_', 
                                     y='Total', 
                                     text='Total',
-                                    color='_FECHA_DIA_', # Cada día tendrá un color distinto para fácil lectura
+                                    color='_FECHA_DIA_', # Cada día tendrá un color distinto para fácil lecturaaa
                                     color_discrete_sequence=px.colors.qualitative.Pastel
                                 )
                                 fig_rango.update_traces(textposition='outside')
