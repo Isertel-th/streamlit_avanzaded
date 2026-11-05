@@ -419,7 +419,7 @@ else:
         if os.path.exists(IMAGE_PATH): st.image(IMAGE_PATH, width=100) 
         else: st.markdown("&nbsp;") 
     with col_title:
-        st.markdown("<h2 style='margin-top:0.5rem; margin-left: -0.5rem;'>📊 Estadístico Isertel</h2>", unsafe_allow_html=True) 
+        st.markdown("<h2 style='margin-top:0.5rem; margin-left: -0.5rem;'>📊 Estadístico Isertel Avanzado</h2>", unsafe_allow_html=True) 
     with col_welcome: 
         st.success(f"Bienvenido {st.session_state.usuario} ({st.session_state.rol})", icon=None) 
     with col_logout: 
