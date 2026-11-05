@@ -9,7 +9,7 @@ import io
 # --- FUNCIÓN DE COMPACIDAD Y CONFIGURACIÓN --- 
 def set_page_config_and_style(): 
 # 1. Configurar layout en modo ancho ("wide") y título 
-    st.set_page_config(layout="wide", page_title="Estadístico Isertel")
+    st.set_page_config(layout="wide", page_title="Estadístico Isertel Avanzado")
 
 # 2. Custom CSS para máxima compacidad y minimalismo
     st.markdown(""" 
