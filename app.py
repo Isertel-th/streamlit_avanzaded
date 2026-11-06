@@ -1012,3 +1012,50 @@ else:
                                 st.plotly_chart(fig_rango, use_container_width=True)
                             else:
                                 st.info("No hay datos para esta combinación.")
+
+
+                                # =====================================================================
+                    # --- NUEVA SECCIÓN: ANÁLISIS DE CUENTAS REPETIDAS ---
+                    # =====================================================================
+                    st.markdown("---")
+                    st.markdown("### 🔄 Análisis de Cuentas Repetidas")
+                    with st.container(border=True):
+                        st.markdown("Registros correspondientes a cuentas que aparecen más de una vez, permitiendo comparar los detalles (motivos, tareas, técnicos, fechas, etc.) de por qué se repitieron.")
+                        
+                        if COL_CUENTA_KEY in datos_filtrados.columns and not datos_filtrados.empty:
+                            # keep=False marca todas las filas que tienen cuentas duplicadas
+                            df_duplicados = datos_filtrados[datos_filtrados[COL_CUENTA_KEY].duplicated(keep=False)].copy()
+                            
+                            if not df_duplicados.empty:
+                                # Ordenar por cuenta y fecha para ver los eventos agrupados cronológicamente
+                                df_duplicados = df_duplicados.sort_values(by=[COL_CUENTA_KEY, COL_TEMP_DATETIME])
+                                
+                                # Mapear nombres de columnas originales para visualización clara
+                                df_dup_vista = df_duplicados.rename(columns=FINAL_RENAMING_MAP)
+                                columnas_dup_finales = [col for col in FINAL_RENAMING_MAP.values() if col in df_dup_vista.columns]
+                                
+                                # Asegurar nombre de técnico limpio si aplica
+                                if COL_FILTRO_TECNICO in df_duplicados.columns and FINAL_RENAMING_MAP['C'] in df_dup_vista.columns:
+                                    df_dup_vista[FINAL_RENAMING_MAP['C']] = df_duplicados[COL_FILTRO_TECNICO]
+                                    
+                                df_dup_vista = df_dup_vista[columnas_dup_finales]
+                                
+                                st.markdown(f"**Total de registros involucrados en cuentas repetidas:** {len(df_dup_vista)}")
+                                
+                                # Mostrar tabla interactiva con todas las columnas
+                                st.dataframe(df_dup_vista, use_container_width=True, hide_index=True)
+                                
+                                # Botón para exportar el análisis de cuentas repetidas a Excel
+                                buffer_dup = io.BytesIO()
+                                df_dup_vista.to_excel(buffer_dup, index=False)
+                                buffer_dup.seek(0)
+                                st.download_button(
+                                    label="⬇️ Descargar Cuentas Repetidas (Excel)",
+                                    data=buffer_dup,
+                                    file_name='cuentas_repetidas.xlsx',
+                                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                                )
+                            else:
+                                st.info("No se encontraron cuentas repetidas con los filtros actuales.")
+                        else:
+                            st.info("No hay datos disponibles para analizar.")
