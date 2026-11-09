@@ -3,7 +3,7 @@
 base = "light" 
 
 # primaryColor: Color principal usado en botones, enlaces y el delta de st.metric.
-primaryColor = "#00BA41" 
+primaryColor = "#30D1CC" 
 
 # backgroundColor: El fondo principal de la aplicación.
 backgroundColor = "rgb(27, 26, 26)" 
@@ -12,7 +12,7 @@ backgroundColor = "rgb(27, 26, 26)"
 secondaryBackgroundColor = "rgb(27, 26, 26)" 
 
 # textColor: Color principal del texto.
-textColor = "#00BA41"
+textColor = "#30D1CC"
 
 #color rojo "#BC2929"
 #color verde "#00BA41"
