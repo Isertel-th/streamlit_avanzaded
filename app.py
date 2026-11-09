@@ -35,6 +35,29 @@ def set_page_config_and_style():
     } 
     .stButton>button { height: 32px; padding-top: 4px !important; padding-bottom: 4px !important; }
     .stDataFrame { margin-top: 0.5rem; } 
+    
+    /* ESTILOS PARA TARJETAS VERSUS */
+    .vs-card-a {
+        background-color: #1E3A8A15;
+        border: 2px solid #1E3A8A;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+    .vs-card-b {
+        background-color: #04785715;
+        border: 2px solid #047857;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+    .vs-card-diff {
+        background-color: #37415115;
+        border: 2px solid #4B5563;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
     </style> 
     """, unsafe_allow_html=True)
 
@@ -230,16 +253,22 @@ else:
             file_dfs_dict["datos_maestros.xlsx"] = datos
         except: 
             np.random.seed(42)
-            n_dummy = 150
-            fechas = pd.date_range(start='2026-08-01', periods=n_dummy, freq='D')
-            ciudades = np.random.choice(['AMBATO', 'QUITO', 'GUAYAQUIL', 'CUENCA', 'LATACUNGA'], n_dummy)
-            tecnicos = np.random.choice(['JUAN PEREZ', 'PEDRO LOPEZ', 'ANA GOMEZ', 'LUIS TORRES', 'CARLOS MERA'], n_dummy)
-            empresas = ['ISERTEL'] * n_dummy
-            tipos_orden = np.random.choice(['Instalación (GPON)', 'Visita Tecnica (GPON)', 'Cambio de dirección (GPON)', 'Migración (GPON)'], n_dummy)
-            motivos = np.random.choice(['OPE/SATISFACTORIO', 'PROBLEMA DE NAVEGACION', 'CAMBIO DE MATERIAL', 'SIN TONO'], n_dummy)
-            gpon_vals = np.random.choice(['SI', 'NO'], n_dummy)
+            n_dummy_aug = 160
+            n_dummy_sep = 210
+            fechas_aug = pd.date_range(start='2026-08-01', periods=n_dummy_aug, freq='D')
+            fechas_sep = pd.date_range(start='2026-09-01', periods=n_dummy_sep, freq='D')
+            
+            fechas = list(fechas_aug) + list(fechas_sep)
+            n_total = len(fechas)
+            
+            ciudades = np.random.choice(['AMBATO', 'QUITO', 'GUAYAQUIL', 'CUENCA', 'LATACUNGA'], n_total)
+            tecnicos = np.random.choice(['JUAN PEREZ', 'PEDRO LOPEZ', 'ANA GOMEZ', 'LUIS TORRES', 'CARLOS MERA'], n_total)
+            empresas = ['ISERTEL'] * n_total
+            tipos_orden = np.random.choice(['Instalación (GPON)', 'Visita Tecnica (GPON)', 'Cambio de dirección (GPON)', 'Migración (GPON)'], n_total)
+            motivos = np.random.choice(['OPE/SATISFACTORIO', 'PROBLEMA DE NAVEGACION', 'CAMBIO DE MATERIAL', 'SIN TONO'], n_total)
+            gpon_vals = np.random.choice(['SI', 'NO'], n_total, p=[0.85, 0.15])
             presentaciones = [f"{t} con Materiales" for t in tipos_orden]
-            control_vals = np.random.choice(['DENTRO DEL SLA', 'FUERA DEL SLA', 'SIN REGISTRO'], n_dummy)
+            control_vals = np.random.choice(['DENTRO DEL SLA', 'FUERA DEL SLA', 'SIN REGISTRO'], n_total, p=[0.7, 0.2, 0.1])
 
             datos = pd.DataFrame({
                 COL_FECHA_KEY: fechas,
@@ -252,13 +281,243 @@ else:
                 COL_TIPO_PRESENTACION_KEY: presentaciones,
                 COL_CONTROL_KEY: control_vals
             })
-            file_dfs_dict["Datos_Prueba_Agosto.xlsx"] = datos
-            file_dfs_dict["Datos_Prueba_Septiembre.xlsx"] = datos.copy()
+            file_dfs_dict["DETALLE LIQUIDADO ISERTEL AGO2026.xlsx"] = datos.iloc[:n_dummy_aug].copy()
+            file_dfs_dict["DETALLE LIQUIDADO ISERTEL SEP2026.xlsx"] = datos.iloc[n_dummy_aug:].copy()
 
     # --- TABS --- 
-    tabs = ["📊 Dashboard", "📁 Paginación por Documento", "⚙️ Administración de Datos"] 
-    if st.session_state.rol.lower() == "admin": tab_dashboard, tab_docs, tab_admin = st.tabs(tabs) 
-    else: tab_dashboard, tab_docs = st.tabs(["📊 Dashboard", "📁 Paginación por Documento"]); tab_admin = None
+    tabs = ["📊 Dashboard", "🆚 Comparativa (Versus - VS)", "📁 Paginación por Documento", "⚙️ Administración de Datos"] 
+    if st.session_state.rol.lower() == "admin": 
+        tab_dashboard, tab_versus, tab_docs, tab_admin = st.tabs(tabs) 
+    else: 
+        tab_dashboard, tab_versus, tab_docs = st.tabs(["📊 Dashboard", "🆚 Comparativa (Versus - VS)", "📁 Paginación por Documento"])
+        tab_admin = None
+
+    # Pre-procesamiento de base limpia general para todas las pestañas
+    datos_base_limpia = None
+    if datos is not None and not datos.empty:
+        datos_base_limpia = datos.copy() 
+        datos_base_limpia[COL_TEMP_DATETIME] = pd.to_datetime(datos_base_limpia[COL_FECHA_KEY], errors='coerce') 
+        datos_base_limpia.dropna(subset=[COL_TEMP_DATETIME], inplace=True)
+        
+        datos_base_limpia[COL_FILTRO_TECNICO] = datos_base_limpia[COL_TECNICO_KEY].apply(clean_tecnico)
+        datos_base_limpia[COL_FILTRO_CIUDAD] = datos_base_limpia[COL_CIUDAD_KEY].apply(clean_ciudad)
+        datos_base_limpia[COL_FILTRO_EMPRESA] = datos_base_limpia[COL_EMPRESA_KEY].apply(clean_text)
+        datos_base_limpia[COL_FILTRO_TIPO_ORDEN] = datos_base_limpia[COL_TIPO_ORDEN_KEY].apply(clean_text)
+        datos_base_limpia[COL_FILTRO_MOTIVO] = datos_base_limpia[COL_MOTIVO_KEY].apply(clean_text)
+        datos_base_limpia[COL_FILTRO_GPON] = datos_base_limpia[COL_GPON_KEY].apply(clean_text)
+        datos_base_limpia[COL_FILTRO_PRESENTACION] = datos_base_limpia[COL_TIPO_PRESENTACION_KEY].apply(clean_text)
+        datos_base_limpia[COL_FILTRO_CONTROL] = datos_base_limpia[COL_CONTROL_KEY].apply(clean_text)
+        
+        # Columna auxiliar de Mes y Año para facilitarle la vida al usuario
+        datos_base_limpia['MES_ANO'] = datos_base_limpia[COL_TEMP_DATETIME].dt.strftime('%Y-%m (%B)')
+
+    # ======================================================================
+    # --- PESTAÑA: 🆚 COMPARATIVA (VERSUS - VS) ---
+    # ======================================================================
+    with tab_versus:
+        st.header("🆚 Módulo Comparativo Profesional (Versus - VS)")
+        st.markdown("Compara de forma precisa dos periodos o meses (Periodo A vs Periodo B) aplicando segmentación por filtros y evaluando aumentos o disminuciones numéricas y porcentuales.")
+        
+        if datos_base_limpia is None or datos_base_limpia.empty:
+            st.warning("No hay datos cargados para realizar comparaciones.")
+        else:
+            with st.container(border=True):
+                st.markdown("### 🎛️ Configuración de Periodos y Filtros a Comparar")
+                
+                min_date_vs = datos_base_limpia[COL_TEMP_DATETIME].min().date()
+                max_date_vs = datos_base_limpia[COL_TEMP_DATETIME].max().date()
+                meses_unicos = datos_base_limpia['MES_ANO'].unique().tolist()
+                
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    st.markdown("#### 🔵 PERIODO A (Base / Referencia)")
+                    modo_a = st.radio("Seleccionar Periodo A por:", ["Rango de Fechas Exacto", "Mes Completo"], key="vs_modo_a", horizontal=True)
+                    if modo_a == "Mes Completo" and meses_unicos:
+                        mes_a = st.selectbox("Seleccione Mes A:", meses_unicos, index=0, key="vs_mes_a")
+                        df_mes_a = datos_base_limpia[datos_base_limpia['MES_ANO'] == mes_a]
+                        fecha_desde_a = df_mes_a[COL_TEMP_DATETIME].min().date()
+                        fecha_hasta_a = df_mes_a[COL_TEMP_DATETIME].max().date()
+                    else:
+                        ca1, ca2 = st.columns(2)
+                        with ca1:
+                            fecha_desde_a = st.date_input("Desde (A):", value=min_date_vs, min_value=min_date_vs, max_value=max_date_vs, key="vs_fda")
+                        with ca2:
+                            fecha_hasta_a = st.date_input("Hasta (A):", value=max_date_vs, min_value=min_date_vs, max_value=max_date_vs, key="vs_fha")
+
+                with col_m2:
+                    st.markdown("#### 🟢 PERIODO B (Comparativo / Versus)")
+                    modo_b = st.radio("Seleccionar Periodo B por:", ["Rango de Fechas Exacto", "Mes Completo"], key="vs_modo_b", horizontal=True)
+                    if modo_b == "Mes Completo" and meses_unicos:
+                        idx_b = 1 if len(meses_unicos) > 1 else 0
+                        mes_b = st.selectbox("Seleccione Mes B:", meses_unicos, index=idx_b, key="vs_mes_b")
+                        df_mes_b = datos_base_limpia[datos_base_limpia['MES_ANO'] == mes_b]
+                        fecha_desde_b = df_mes_b[COL_TEMP_DATETIME].min().date()
+                        fecha_hasta_b = df_mes_b[COL_TEMP_DATETIME].max().date()
+                    else:
+                        cb1, cb2 = st.columns(2)
+                        with cb1:
+                            fecha_desde_b = st.date_input("Desde (B):", value=min_date_vs, min_value=min_date_vs, max_value=max_date_vs, key="vs_fdb")
+                        with cb2:
+                            fecha_hasta_b = st.date_input("Hasta (B):", value=max_date_vs, min_value=min_date_vs, max_value=max_date_vs, key="vs_fhb")
+
+                st.markdown("---")
+                st.markdown("#### 🎯 Segmentación Compartida (Aplica a ambos periodos para un VS justo)")
+                
+                vs_c1, vs_c2, vs_c3, vs_c4, vs_c5 = st.columns(5)
+                
+                op_vs_ciu = sorted(datos_base_limpia[COL_FILTRO_CIUDAD].unique().tolist())
+                op_vs_tec = sorted(datos_base_limpia[COL_FILTRO_TECNICO].unique().tolist())
+                op_vs_tipo = sorted(datos_base_limpia[COL_FILTRO_TIPO_ORDEN].unique().tolist())
+                op_vs_gpon = sorted(datos_base_limpia[COL_FILTRO_GPON].unique().tolist())
+                op_vs_ctrl = sorted(datos_base_limpia[COL_FILTRO_CONTROL].unique().tolist())
+
+                with vs_c1:
+                    vs_f_ciu = st.multiselect("Ciudad (VS):", options=op_vs_ciu, key="vs_f_ciu", placeholder="Todas")
+                with vs_c2:
+                    vs_f_tec = st.multiselect("Técnico (VS):", options=op_vs_tec, key="vs_f_tec", placeholder="Todos")
+                with vs_c3:
+                    vs_f_tipo = st.multiselect("Tipo de Orden (VS):", options=op_vs_tipo, key="vs_f_tipo", placeholder="Todos")
+                with vs_c4:
+                    vs_f_gpon = st.multiselect("GPON (VS):", options=op_vs_gpon, key="vs_f_gpon", placeholder="Todos")
+                with vs_c5:
+                    vs_f_ctrl = st.multiselect("Control SLA (VS):", options=op_vs_ctrl, key="vs_f_ctrl", placeholder="Todos")
+
+            # --- FILTRADO DE DATOS A Y B ---
+            def filter_vs_data(df, f_desde, f_hasta, ciu, tec, tipo, gpon, ctrl):
+                dt_start = pd.to_datetime(f_desde)
+                dt_end = pd.to_datetime(f_hasta) + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+                
+                sub = df[(df[COL_TEMP_DATETIME] >= dt_start) & (df[COL_TEMP_DATETIME] <= dt_end)].copy()
+                if ciu: sub = sub[sub[COL_FILTRO_CIUDAD].isin(ciu)]
+                if tec: sub = sub[sub[COL_FILTRO_TECNICO].isin(tec)]
+                if tipo: sub = sub[sub[COL_FILTRO_TIPO_ORDEN].isin(tipo)]
+                if gpon: sub = sub[sub[COL_FILTRO_GPON].isin(gpon)]
+                if ctrl: sub = sub[sub[COL_FILTRO_CONTROL].isin(ctrl)]
+                return sub
+
+            df_vs_a = filter_vs_data(datos_base_limpia, fecha_desde_a, fecha_hasta_a, vs_f_ciu, vs_f_tec, vs_f_tipo, vs_f_gpon, vs_f_ctrl)
+            df_vs_b = filter_vs_data(datos_base_limpia, fecha_desde_b, fecha_hasta_b, vs_f_ciu, vs_f_tec, vs_f_tipo, vs_f_gpon, vs_f_ctrl)
+
+            # --- PRESENTACIÓN DE RESULTADOS VERSUS ---
+            st.markdown("### 📊 Resultado del Análisis Versus (VS)")
+            label_periodo_a = f"🔵 Periodo A ({fecha_desde_a.strftime('%d/%b')} - {fecha_hasta_a.strftime('%d/%b/%Y')})"
+            label_periodo_b = f"🟢 Periodo B ({fecha_desde_b.strftime('%d/%b')} - {fecha_hasta_b.strftime('%d/%b/%Y')})"
+            
+            st.info(f"Comparando **{label_periodo_a}** VS **{label_periodo_b}**")
+
+            val_a_total = len(df_vs_a)
+            val_b_total = len(df_vs_b)
+            diff_total = val_b_total - val_a_total
+            pct_total = ((diff_total / val_a_total) * 100) if val_a_total > 0 else (100.0 if val_b_total > 0 else 0.0)
+
+            k_a, k_b, k_d = st.columns(3)
+            with k_a:
+                st.markdown(f'<div class="vs-card-a"><h4>{label_periodo_a}</h4><h2>{val_a_total:,} registros</h2></div>', unsafe_allow_html=True)
+            with k_b:
+                st.markdown(f'<div class="vs-card-b"><h4>{label_periodo_b}</h4><h2>{val_b_total:,} registros</h2></div>', unsafe_allow_html=True)
+            with k_d:
+                color_trend = "#047857" if diff_total >= 0 else "#B71C1C"
+                signo = "+" if diff_total > 0 else ""
+                st.markdown(f'<div class="vs-card-diff"><h4 style="color:{color_trend};">DIFERENCIA (B vs A)</h4><h2 style="color:{color_trend};">{signo}{diff_total:,} ({signo}{pct_total:.1f}%)</h2></div>', unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            # DETALLE DE COMPARACIÓN POR INDICADOR CLAVE
+            st.markdown("#### 🎯 Comparativa Detallada de Indicadores (Aumentos y Disminuciones)")
+            
+            def get_vs_metrics(df_sub):
+                tot = len(df_sub)
+                g_si = len(df_sub[df_sub[COL_FILTRO_GPON] == 'SI'])
+                g_no = len(df_sub[df_sub[COL_FILTRO_GPON] == 'NO'])
+                inst = len(df_sub[df_sub[COL_FILTRO_TIPO_ORDEN].str.contains('INSTALA', case=False, na=False)])
+                vis = len(df_sub[df_sub[COL_FILTRO_TIPO_ORDEN].str.contains('VISITA', case=False, na=False)])
+                sla_in = len(df_sub[df_sub[COL_FILTRO_CONTROL].str.contains('DENTRO', case=False, na=False)])
+                sla_out = len(df_sub[df_sub[COL_FILTRO_CONTROL].str.contains('FUERA', case=False, na=False)])
+                return [tot, g_si, g_no, inst, vis, sla_in, sla_out]
+
+            metrics_names = [
+                "Total Registros", 
+                "Instalaciones GPON (Sí)", 
+                "Instalaciones GPON (No)", 
+                "Órdenes de Instalación", 
+                "Visitas Técnicas", 
+                "Dentro del SLA", 
+                "Fuera del SLA"
+            ]
+            m_a_vals = get_vs_metrics(df_vs_a)
+            m_b_vals = get_vs_metrics(df_vs_b)
+
+            vs_table_data = []
+            for name, va, vb in zip(metrics_names, m_a_vals, m_b_vals):
+                diff = vb - va
+                pct = ((diff / va) * 100) if va > 0 else (100.0 if vb > 0 else 0.0)
+                estado = "🟢 Aumentó" if diff > 0 else ("🔴 Disminuyó" if diff < 0 else "⚪ Sin Cambio")
+                vs_table_data.append({
+                    "Indicador": name,
+                    "Periodo A": f"{va:,}",
+                    "Periodo B": f"{vb:,}",
+                    "Diferencia Absoluta": f"{'+' if diff > 0 else ''}{diff:,}",
+                    "Variación %": f"{'+' if diff > 0 else ''}{pct:.1f}%",
+                    "Tendencia": estado
+                })
+
+            df_vs_summary = pd.DataFrame(vs_table_data)
+            st.dataframe(df_vs_summary, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+            st.markdown("#### 📈 Gráficos Comparativos Directos (A VS B)")
+            
+            g_vs1, g_vs2 = st.columns(2)
+            
+            with g_vs1:
+                with st.container(border=True):
+                    st.markdown("##### 📌 Comparativa por Tipo de Orden (Barras Agrupadas)")
+                    t_a = df_vs_a[COL_FILTRO_TIPO_ORDEN].value_counts().reset_index()
+                    t_a.columns = ['Tipo de Orden', 'Cantidad']
+                    t_a['Periodo'] = 'Periodo A'
+
+                    t_b = df_vs_b[COL_FILTRO_TIPO_ORDEN].value_counts().reset_index()
+                    t_b.columns = ['Tipo de Orden', 'Cantidad']
+                    t_b['Periodo'] = 'Periodo B'
+
+                    df_tipo_comb = pd.concat([t_a, t_b], ignore_index=True)
+                    fig_vs_tipo = px.bar(
+                        df_tipo_comb, 
+                        x='Tipo de Orden', 
+                        y='Cantidad', 
+                        color='Periodo', 
+                        barmode='group',
+                        text='Cantidad',
+                        color_discrete_map={'Periodo A': '#1E3A8A', 'Periodo B': '#047857'}
+                    )
+                    fig_vs_tipo.update_layout(height=350, xaxis_title=None, yaxis_title="Total")
+                    fig_vs_tipo.update_traces(textposition='outside')
+                    st.plotly_chart(fig_vs_tipo, use_container_width=True)
+
+            with g_vs2:
+                with st.container(border=True):
+                    st.markdown("##### 🏙️ Comparativa por Ciudad Top (Barras Agrupadas)")
+                    c_a = df_vs_a[COL_FILTRO_CIUDAD].value_counts().head(5).reset_index()
+                    c_a.columns = ['Ciudad', 'Cantidad']
+                    c_a['Periodo'] = 'Periodo A'
+
+                    c_b = df_vs_b[COL_FILTRO_CIUDAD].value_counts().head(5).reset_index()
+                    c_b.columns = ['Ciudad', 'Cantidad']
+                    c_b['Periodo'] = 'Periodo B'
+
+                    df_ciu_comb = pd.concat([c_a, c_b], ignore_index=True)
+                    fig_vs_ciu = px.bar(
+                        df_ciu_comb, 
+                        x='Ciudad', 
+                        y='Cantidad', 
+                        color='Periodo', 
+                        barmode='group',
+                        text='Cantidad',
+                        color_discrete_map={'Periodo A': '#1E3A8A', 'Periodo B': '#047857'}
+                    )
+                    fig_vs_ciu.update_layout(height=350, xaxis_title=None, yaxis_title="Total")
+                    fig_vs_ciu.update_traces(textposition='outside')
+                    st.plotly_chart(fig_vs_ciu, use_container_width=True)
 
     # ======================================================================
     # --- PESTAÑA: PAGINACIÓN POR DOCUMENTO (TABLA DINÁMICA MULTI-ARCHIVO) ---
@@ -330,21 +589,6 @@ else:
         if datos is None or datos.empty: 
             st.warning("No hay datos para mostrar.") 
         else:
-            # 1. PREPARACIÓN Y LIMPIEZA DE DATOS
-            datos_base_limpia = datos.copy() 
-            datos_base_limpia[COL_TEMP_DATETIME] = pd.to_datetime(datos_base_limpia[COL_FECHA_KEY], errors='coerce') 
-            datos_base_limpia.dropna(subset=[COL_TEMP_DATETIME], inplace=True)
-            
-            # Limpieza y estandarización para filtros y métricas
-            datos_base_limpia[COL_FILTRO_TECNICO] = datos_base_limpia[COL_TECNICO_KEY].apply(clean_tecnico)
-            datos_base_limpia[COL_FILTRO_CIUDAD] = datos_base_limpia[COL_CIUDAD_KEY].apply(clean_ciudad)
-            datos_base_limpia[COL_FILTRO_EMPRESA] = datos_base_limpia[COL_EMPRESA_KEY].apply(clean_text)
-            datos_base_limpia[COL_FILTRO_TIPO_ORDEN] = datos_base_limpia[COL_TIPO_ORDEN_KEY].apply(clean_text)
-            datos_base_limpia[COL_FILTRO_MOTIVO] = datos_base_limpia[COL_MOTIVO_KEY].apply(clean_text)
-            datos_base_limpia[COL_FILTRO_GPON] = datos_base_limpia[COL_GPON_KEY].apply(clean_text)
-            datos_base_limpia[COL_FILTRO_PRESENTACION] = datos_base_limpia[COL_TIPO_PRESENTACION_KEY].apply(clean_text)
-            datos_base_limpia[COL_FILTRO_CONTROL] = datos_base_limpia[COL_CONTROL_KEY].apply(clean_text)
-
             if datos_base_limpia.empty: 
                 st.warning("No hay registros con fechas válidas para mostrar.") 
             else:
@@ -375,7 +619,6 @@ else:
                                     st.session_state[k] = [] if 'desde' not in k and 'hasta' not in k else st.session_state[k]
                             st.rerun()
 
-                    # Fila 1 de filtros: Fechas, Ciudad, Técnico, Empresa
                     c1, c2, c3, c4, c5 = st.columns([1.1, 1.1, 1.2, 1.2, 1.2])
                     with c1:
                         min_date_global = datos_base_limpia[COL_TEMP_DATETIME].min().replace(hour=0, minute=0, second=0, microsecond=0) 
@@ -394,7 +637,6 @@ else:
                         (datos_base_limpia[COL_TEMP_DATETIME] <= filtro_fin)
                     ].copy()
 
-                    # Capturar selecciones previas de session_state
                     s_ciu = st.session_state.get('f_ciu', [])
                     s_tec = st.session_state.get('f_tec', [])
                     s_emp = st.session_state.get('f_emp', [])
@@ -404,10 +646,7 @@ else:
                     s_pres = st.session_state.get('f_pres', [])
                     s_ctrl = st.session_state.get('f_ctrl', [])
 
-                    # LÓGICA DE FILTRADO CRUZADO COHERENTE:
-                    # Para calcular las opciones disponibles de cada campo, filtramos df_base_fecha por todos los DEMÁS campos
-                    
-                    # 1. Opciones Ciudad (Filtra por tec, emp, tipo, mot, gpon, pres, ctrl)
+                    # LÓGICA DE FILTRADO CRUZADO COHERENTE
                     df_c = apply_filter(df_base_fecha, COL_FILTRO_TECNICO, s_tec)
                     df_c = apply_filter(df_c, COL_FILTRO_EMPRESA, s_emp)
                     df_c = apply_filter(df_c, COL_FILTRO_TIPO_ORDEN, s_tipo)
@@ -417,7 +656,6 @@ else:
                     df_c = apply_filter(df_c, COL_FILTRO_CONTROL, s_ctrl)
                     op_ciu = get_multiselect_options(df_c, COL_FILTRO_CIUDAD)
 
-                    # 2. Opciones Técnico (Filtra por ciu, emp, tipo, mot, gpon, pres, ctrl)
                     df_t = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_t = apply_filter(df_t, COL_FILTRO_EMPRESA, s_emp)
                     df_t = apply_filter(df_t, COL_FILTRO_TIPO_ORDEN, s_tipo)
@@ -427,7 +665,6 @@ else:
                     df_t = apply_filter(df_t, COL_FILTRO_CONTROL, s_ctrl)
                     op_tec = get_multiselect_options(df_t, COL_FILTRO_TECNICO)
 
-                    # 3. Opciones Empresa (Filtra por ciu, tec, tipo, mot, gpon, pres, ctrl)
                     df_em = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_em = apply_filter(df_em, COL_FILTRO_TECNICO, s_tec)
                     df_em = apply_filter(df_em, COL_FILTRO_TIPO_ORDEN, s_tipo)
@@ -437,7 +674,6 @@ else:
                     df_em = apply_filter(df_em, COL_FILTRO_CONTROL, s_ctrl)
                     op_emp = get_multiselect_options(df_em, COL_FILTRO_EMPRESA)
 
-                    # 4. Opciones Tipo Orden (Filtra por ciu, tec, emp, mot, gpon, pres, ctrl)
                     df_tp = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_tp = apply_filter(df_tp, COL_FILTRO_TECNICO, s_tec)
                     df_tp = apply_filter(df_tp, COL_FILTRO_EMPRESA, s_emp)
@@ -447,7 +683,6 @@ else:
                     df_tp = apply_filter(df_tp, COL_FILTRO_CONTROL, s_ctrl)
                     op_tipo = get_multiselect_options(df_tp, COL_FILTRO_TIPO_ORDEN)
 
-                    # 5. Opciones Motivo (Filtra por ciu, tec, emp, tipo, gpon, pres, ctrl)
                     df_m = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_m = apply_filter(df_m, COL_FILTRO_TECNICO, s_tec)
                     df_m = apply_filter(df_m, COL_FILTRO_EMPRESA, s_emp)
@@ -457,7 +692,6 @@ else:
                     df_m = apply_filter(df_m, COL_FILTRO_CONTROL, s_ctrl)
                     op_mot = get_multiselect_options(df_m, COL_FILTRO_MOTIVO)
 
-                    # 6. Opciones GPON (Filtra por ciu, tec, emp, tipo, mot, pres, ctrl)
                     df_g = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_g = apply_filter(df_g, COL_FILTRO_TECNICO, s_tec)
                     df_g = apply_filter(df_g, COL_FILTRO_EMPRESA, s_emp)
@@ -467,7 +701,6 @@ else:
                     df_g = apply_filter(df_g, COL_FILTRO_CONTROL, s_ctrl)
                     op_gpon = get_multiselect_options(df_g, COL_FILTRO_GPON)
 
-                    # 7. Opciones Presentación (Filtra por ciu, tec, emp, tipo, mot, gpon, ctrl)
                     df_pr = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_pr = apply_filter(df_pr, COL_FILTRO_TECNICO, s_tec)
                     df_pr = apply_filter(df_pr, COL_FILTRO_EMPRESA, s_emp)
@@ -477,7 +710,6 @@ else:
                     df_pr = apply_filter(df_pr, COL_FILTRO_CONTROL, s_ctrl)
                     op_pres = get_multiselect_options(df_pr, COL_FILTRO_PRESENTACION)
 
-                    # 8. Opciones Control (Filtra por ciu, tec, emp, tipo, mot, gpon, pres)
                     df_ct = apply_filter(df_base_fecha, COL_FILTRO_CIUDAD, s_ciu)
                     df_ct = apply_filter(df_ct, COL_FILTRO_TECNICO, s_tec)
                     df_ct = apply_filter(df_ct, COL_FILTRO_EMPRESA, s_emp)
@@ -487,7 +719,6 @@ else:
                     df_ct = apply_filter(df_ct, COL_FILTRO_PRESENTACION, s_pres)
                     op_ctrl = get_multiselect_options(df_ct, COL_FILTRO_CONTROL)
 
-                    # Asegurar que los valores previamente seleccionados que ya no existan en el subset se limpien
                     valid_ciu = [v for v in s_ciu if v in op_ciu]
                     valid_tec = [v for v in s_tec if v in op_tec]
                     valid_emp = [v for v in s_emp if v in op_emp]
@@ -513,7 +744,6 @@ else:
                     with c5:
                         filtro_empresa = st.multiselect(f"**{COL_EMPRESA_DESCRIPTIVA}**:", options=op_emp, key='f_emp', placeholder="Empresa")
 
-                    # Fila 2 de filtros: Tipo Orden, Motivo, GPON, Presentación, Control
                     c6, c7, c8, c9, c10 = st.columns([1.2, 1.2, 1.0, 1.3, 1.2])
                     with c6:
                         filtro_tipo_orden = st.multiselect(f"**{COL_TIPO_ORDEN_DESCRIPTIVA}**:", options=op_tipo, key='f_tipo', placeholder="Tipo Orden")
@@ -526,7 +756,6 @@ else:
                     with c10:
                         filtro_control = st.multiselect(f"**{COL_CONTROL_DESCRIPTIVA}**:", options=op_ctrl, key='f_ctrl', placeholder="Control")
 
-                    # Aplicación final de filtros a los datos
                     df_final = df_base_fecha.copy()
                     df_final = apply_filter(df_final, COL_FILTRO_CIUDAD, filtro_ciudad)
                     df_final = apply_filter(df_final, COL_FILTRO_TECNICO, filtro_tecnico)
@@ -581,12 +810,11 @@ else:
                 st.markdown("---")
 
                 # -----------------------------------------------------------------------------
-                # --- LAYOUT PRINCIPAL: SECCIÓN DE GRÁFICOS INTUITIVOS (TABLA ELIMINADA) --- 
+                # --- LAYOUT PRINCIPAL: SECCIÓN DE GRÁFICOS INTUITIVOS --- 
                 # -----------------------------------------------------------------------------
                 st.markdown("#### 📈 Gráficos Intuitivos y Dinámicos (Toca el botón ⛶ en la esquina de cada gráfico para ver a Pantalla Completa)")
                 
                 if not datos_filtrados.empty:
-                    # Fila 1 de Gráficos
                     g1, g2 = st.columns(2)
                     
                     with g1:
@@ -609,7 +837,6 @@ else:
                             fig_g.update_traces(textposition='inside', textinfo='percent+label')
                             st.plotly_chart(fig_g, use_container_width=True)
 
-                    # Fila 2 de Gráficos
                     g3, g4 = st.columns(2)
                     with g3:
                         with st.container(border=True):
@@ -631,15 +858,10 @@ else:
                             fig_ci.update_traces(textposition='outside')
                             st.plotly_chart(fig_ci, use_container_width=True)
 
-                    # --- NUEVO GRÁFICO MEJORADO DE EVOLUCIÓN (REEMPLAZANDO AL CARGADO/LINEAL) ---
                     with st.container(border=True):
-                        st.markdown("##### 📅 Resumen de Producción por Periodo / Semana (Reemplazo Limpio de Evolución)")
+                        st.markdown("##### 📅 Resumen de Producción por Periodo / Semana")
                         df_fecha = datos_filtrados.copy()
-                        df_fecha['_FECHA_DIA_'] = df_fecha[COL_TEMP_DATETIME].dt.date
-                        
-                        # Si hay un rango de fechas amplio, agrupamos semanalmente o por bloques para limpiar la vista
                         df_fecha['Semana'] = df_fecha[COL_TEMP_DATETIME].dt.to_period('W').dt.start_time.dt.strftime('%d %b %Y')
-                        
                         df_ev = df_fecha.groupby('Semana', sort=False).size().reset_index(name='Total Trabajos')
                         
                         fig_ev = px.bar(
