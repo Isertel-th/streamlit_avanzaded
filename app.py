@@ -8,7 +8,7 @@ import io
 
 # --- FUNCIÓN DE COMPACIDAD Y CONFIGURACIÓN --- 
 def set_page_config_and_style(): 
-    st.set_page_config(layout="wide", page_title="Estadístico Isertel Avanzado - Nuevo Formato")
+    st.set_page_config(layout="wide", page_title="Estadístico Isertel - Nuevo Formato")
 
     st.markdown(""" 
     <style> 
@@ -146,7 +146,7 @@ if not st.session_state.login:
         if os.path.exists(IMAGE_PATH): st.image(IMAGE_PATH, width=100) 
         else: st.markdown("&nbsp;") 
     with col_title_login:
-        st.markdown("<h2 style='margin-top:0.5rem;'>📊 Estadístico Isertel Avanzado</h2>", unsafe_allow_html=True) 
+        st.markdown("<h2 style='margin-top:0.5rem;'>📊 Estadístico Isertel</h2>", unsafe_allow_html=True) 
 
     st.subheader("Inicia sesión para acceder")
     col_login_spacer_l, col_login_box, col_login_spacer_r = st.columns([1, 2, 1])
@@ -171,7 +171,7 @@ else:
         if os.path.exists(IMAGE_PATH): st.image(IMAGE_PATH, width=100) 
         else: st.markdown("&nbsp;") 
     with col_title:
-        st.markdown("<h2 style='margin-top:0.5rem;'>📊 Estadístico Isertel Avanzado</h2>", unsafe_allow_html=True) 
+        st.markdown("<h2 style='margin-top:0.5rem;'>📊 Estadístico Isertel</h2>", unsafe_allow_html=True) 
     with col_welcome: 
         st.success(f"Bienvenido {st.session_state.usuario} ({st.session_state.rol})", icon=None) 
     with col_logout: 
