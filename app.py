@@ -339,12 +339,14 @@ else:
                     st.markdown("---")
                     st.markdown("#### 🎯 Segmentación Compartida")
                     
-                    vs_c1, vs_c2, vs_c3, vs_c4 = st.columns(4)
+                    # 5 Columnas para incluir el filtro de Tipo de Presentación
+                    vs_c1, vs_c2, vs_c3, vs_c4, vs_c5 = st.columns(5)
                     
                     op_vs_ciu = sorted(datos_base_limpia[COL_FILTRO_CIUDAD].unique().tolist())
                     op_vs_tec = sorted(datos_base_limpia[COL_FILTRO_TECNICO].unique().tolist())
                     op_vs_gpon = sorted(datos_base_limpia[COL_FILTRO_GPON].unique().tolist())
                     op_vs_ctrl = sorted(datos_base_limpia[COL_FILTRO_CONTROL].unique().tolist())
+                    op_vs_pres = sorted(datos_base_limpia[COL_FILTRO_PRESENTACION].unique().tolist())
 
                     with vs_c1:
                         vs_f_ciu = st.multiselect("Ciudad (VS):", options=op_vs_ciu, key="vs_m_ciu", placeholder="Todas")
@@ -354,6 +356,8 @@ else:
                         vs_f_gpon = st.multiselect("GPON (VS):", options=op_vs_gpon, key="vs_m_gpon", placeholder="Todos")
                     with vs_c4:
                         vs_f_ctrl = st.multiselect("Control SLA (VS):", options=op_vs_ctrl, key="vs_m_ctrl", placeholder="Todos")
+                    with vs_c5:
+                        vs_f_pres = st.multiselect("Presentación (VS):", options=op_vs_pres, key="vs_m_pres", placeholder="Todas")
 
             if not meses_seleccionados:
                 st.warning("Por favor seleccione al menos un mes para realizar la comparativa.")
@@ -365,6 +369,7 @@ else:
                     if vs_f_tec: sub = sub[sub[COL_FILTRO_TECNICO].isin(vs_f_tec)]
                     if vs_f_gpon: sub = sub[sub[COL_FILTRO_GPON].isin(vs_f_gpon)]
                     if vs_f_ctrl: sub = sub[sub[COL_FILTRO_CONTROL].isin(vs_f_ctrl)]
+                    if vs_f_pres: sub = sub[sub[COL_FILTRO_PRESENTACION].isin(vs_f_pres)]
                     dict_dfs_meses[m] = sub
 
                 st.markdown("### 📊 Resultados del Versus Multimes")
