@@ -390,58 +390,66 @@ else:
                         """, unsafe_allow_html=True)
 
                 st.markdown("---")
-                st.markdown("#### 📋 Tabla Comparativa con Tendencia")
                 
-                def get_indicators_dict(df_sub):
-                    tot = len(df_sub)
-                    dentro = len(df_sub[df_sub[COL_FILTRO_CONTROL].str.contains('DENTRO', case=False, na=False)])
-                    fuera = len(df_sub[df_sub[COL_FILTRO_CONTROL].str.contains('FUERA', case=False, na=False)])
-                    return {
-                        "Total Registros": tot,
-                        "Instalaciones GPON (Sí)": len(df_sub[df_sub[COL_FILTRO_GPON] == 'SI']),
-                        "Instalaciones GPON (No)": len(df_sub[df_sub[COL_FILTRO_GPON] == 'NO']),
-                        "Dentro del SLA (%)": f"{(dentro/tot*100):.1f}%" if tot > 0 else "0.0%",
-                        "Fuera del SLA (%)": f"{(fuera/tot*100):.1f}%" if tot > 0 else "0.0%"
-                    }
-
-                indicadores_nombres = [
-                    "Total Registros", 
-                    "Instalaciones GPON (Sí)", 
-                    "Instalaciones GPON (No)", 
-                    "Dentro del SLA (%)", 
-                    "Fuera del SLA (%)"
-                ]
-
-                tabla_vs_data = []
-                m_primero = meses_seleccionados[0]
-                m_ultimo = meses_seleccionados[-1]
-
-                for ind in indicadores_nombres:
-                    row_dict = {"Indicador": ind}
-                    val_primero = 0
-                    val_ultimo = 0
-                    
-                    for idx_m, m in enumerate(meses_seleccionados):
-                        ind_vals = get_indicators_dict(dict_dfs_meses[m])
-                        val_curr = ind_vals.get(ind, 0)
-                        row_dict[m] = f"{val_curr:,}" if isinstance(val_curr, (int, float)) else val_curr
+                # --- NUEVOS GRÁFICOS DINÁMICOS EN EL MÓDULO VERSUS ---
+                col_g_bar, col_g_line = st.columns(2)
+                
+                with col_g_bar:
+                    with st.container(border=True):
+                        st.markdown("#### 📊 Gráfico de Barras Dinámico (Registros por Mes)")
+                        bar_dynamic_data = []
+                        for m in meses_seleccionados:
+                            sub = dict_dfs_meses[m]
+                            bar_dynamic_data.append({"Mes": m, "Total Registros": len(sub)})
                         
-                        if idx_m == 0 and isinstance(val_curr, (int, float)): val_primero = val_curr
-                        if idx_m == len(meses_seleccionados) - 1 and isinstance(val_curr, (int, float)): val_ultimo = val_curr
+                        df_bar_dyn = pd.DataFrame(bar_dynamic_data)
+                        fig_bar_dyn = px.bar(
+                            df_bar_dyn,
+                            x='Mes',
+                            y='Total Registros',
+                            text='Total Registros',
+                            color='Mes',
+                            color_discrete_sequence=px.colors.qualitative.Bold
+                        )
+                        fig_bar_dyn.update_layout(
+                            xaxis_title=None,
+                            yaxis_title="Total Registros",
+                            showlegend=False,
+                            margin=dict(t=25, b=25, l=15, r=15),
+                            height=360
+                        )
+                        fig_bar_dyn.update_traces(textposition='outside')
+                        st.plotly_chart(fig_bar_dyn, use_container_width=True)
 
-                    if isinstance(val_primero, (int, float)) and isinstance(val_ultimo, (int, float)):
-                        diff = val_ultimo - val_primero
-                        if diff > 0: estado_tendencia = "🟢 Aumentó"
-                        elif diff < 0: estado_tendencia = "🔴 Disminuyó"
-                        else: estado_tendencia = "⚪ Se Mantuvo Igual"
-                    else:
-                        estado_tendencia = "➖ N/A"
-
-                    row_dict["Tendencia Global"] = estado_tendencia
-                    tabla_vs_data.append(row_dict)
-
-                df_multimes_summary = pd.DataFrame(tabla_vs_data)
-                st.dataframe(df_multimes_summary, use_container_width=True, hide_index=True)
+                with col_g_line:
+                    with st.container(border=True):
+                        st.markdown("#### 📈 Gráfico de Trayectoria SLA (Dentro vs Fuera)")
+                        sla_trajectory_data = []
+                        for m in meses_seleccionados:
+                            sub = dict_dfs_meses[m]
+                            dentro = len(sub[sub[COL_FILTRO_CONTROL].str.contains('DENTRO', case=False, na=False)])
+                            fuera = len(sub[sub[COL_FILTRO_CONTROL].str.contains('FUERA', case=False, na=False)])
+                            
+                            sla_trajectory_data.append({"Mes": m, "Estado SLA": "Dentro del SLA", "Cantidad": dentro})
+                            sla_trajectory_data.append({"Mes": m, "Estado SLA": "Fuera del SLA", "Cantidad": fuera})
+                        
+                        df_sla_traj = pd.DataFrame(sla_trajectory_data)
+                        fig_sla_traj = px.line(
+                            df_sla_traj,
+                            x='Mes',
+                            y='Cantidad',
+                            color='Estado SLA',
+                            markers=True,
+                            color_discrete_map={"Dentro del SLA": "#4CAF50", "Fuera del SLA": "#F44336"}
+                        )
+                        fig_sla_traj.update_layout(
+                            xaxis_title=None,
+                            yaxis_title="Cantidad de Órdenes",
+                            margin=dict(t=25, b=25, l=15, r=15),
+                            height=360,
+                            legend_title=None
+                        )
+                        st.plotly_chart(fig_sla_traj, use_container_width=True)
 
     # ======================================================================
     # --- PESTAÑA: PAGINACIÓN POR DOCUMENTO ---
