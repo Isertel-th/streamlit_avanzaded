@@ -337,6 +337,17 @@ else:
                             meses_seleccionados = meses_unicos[idx_i:idx_f+1]
                     
                     st.markdown("---")
+                    # --- NUEVA FUNCIONALIDAD: FILTRO DE RANGO DE DÍAS (DESDE - HASTA) EN LOS MESES ELEGIDOS ---
+                    st.markdown("#### 📅 Filtro Opcional de Rango de Días (Para los meses elegidos)")
+                    d_col1, d_col2, d_col3 = st.columns([1.2, 1, 1])
+                    with d_col1:
+                        activar_rango_dias = st.checkbox("Activar filtro de días en el mes", value=False, key="vs_activar_dias")
+                    with d_col2:
+                        vs_dia_ini = st.number_input("Día Desde:", min_value=1, max_value=31, value=1, key="vs_dia_ini", disabled=not activar_rango_dias)
+                    with d_col3:
+                        vs_dia_fin = st.number_input("Día Hasta:", min_value=1, max_value=31, value=10, key="vs_dia_fin", disabled=not activar_rango_dias)
+
+                    st.markdown("---")
                     st.markdown("#### 🎯 Segmentación Compartida")
                     
                     # 5 Columnas para incluir el filtro de Tipo de Presentación
@@ -365,6 +376,11 @@ else:
                 dict_dfs_meses = {}
                 for m in meses_seleccionados:
                     sub = datos_base_limpia[datos_base_limpia['MES_ANO'] == m].copy()
+                    
+                    # Aplicar filtro de rango de días si está activado
+                    if activar_rango_dias:
+                        sub = sub[(sub[COL_TEMP_DATETIME].dt.day >= vs_dia_ini) & (sub[COL_TEMP_DATETIME].dt.day <= vs_dia_fin)]
+                    
                     if vs_f_ciu: sub = sub[sub[COL_FILTRO_CIUDAD].isin(vs_f_ciu)]
                     if vs_f_tec: sub = sub[sub[COL_FILTRO_TECNICO].isin(vs_f_tec)]
                     if vs_f_gpon: sub = sub[sub[COL_FILTRO_GPON].isin(vs_f_gpon)]
@@ -374,7 +390,8 @@ else:
 
                 st.markdown("### 📊 Resultados del Versus Multimes")
                 num_meses = len(meses_seleccionados)
-                st.info(f"Comparando simultáneamente **{num_meses} meses**: " + " vs ".join([f"**{m}**" for m in meses_seleccionados]))
+                detalle_dias_str = f" (Días del {vs_dia_ini} al {vs_dia_fin})" if activar_rango_dias else ""
+                st.info(f"Comparando simultáneamente **{num_meses} meses**{detalle_dias_str}: " + " vs ".join([f"**{m}**" for m in meses_seleccionados]))
                 
                 cols_cards = st.columns(min(num_meses, 6))
                 for idx, m in enumerate(meses_seleccionados):
@@ -391,7 +408,7 @@ else:
 
                 st.markdown("---")
                 
-                # --- NUEVOS GRÁFICOS DINÁMICOS EN EL MÓDULO VERSUS ---
+                # --- GRÁFICOS DINÁMICOS EN EL MÓDULO VERSUS ---
                 col_g_bar, col_g_line = st.columns(2)
                 
                 with col_g_bar:
